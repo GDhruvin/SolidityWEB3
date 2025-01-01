@@ -7,6 +7,7 @@ contract Twitter{
     uint16 public  MAX_TWEET_LENGTH = 285;
 
     struct Tweet {
+        uint256 id;
         address author;
         string content;
         uint256 timestamp;
@@ -18,6 +19,10 @@ contract Twitter{
     constructor() {
         owner = msg.sender;
     }
+
+    event TweetCreated(uint256 id, address author, string content, uint256 timestamp);
+    event TweetLike(address liker, address tweetAuthor, uint256 tweetId, uint256 newLikesCount);
+    event TweetUnlike(address unLiker, address tweetAuthor, uint256 tweetId, uint256 newLikesCount);
 
     modifier onlyOwner(){
         require(msg.sender == owner, "YOU ARE NOT OWNER");
@@ -36,6 +41,7 @@ contract Twitter{
         require(bytes(_tweet).length <= MAX_TWEET_LENGTH, "Tweet length is too much long");
 
         Tweet memory newTweet = Tweet({
+            id: tweets[msg.sender].length,
             author: msg.sender,
             content: _tweet,
             timestamp: block.timestamp,
@@ -43,11 +49,23 @@ contract Twitter{
         });
 
         tweets[msg.sender].push(newTweet);
+
+        emit TweetCreated(newTweet.id, newTweet.author, newTweet.content, newTweet.timestamp);
     }
 
-    function hitLike(address _owner, uint _i) public {
-        require(_i < tweets[_owner].length, "Invalid tweet index"); // Ensure the index is valid
-        tweets[_owner][_i].likes += 1;
+    function likeTweet(address author, uint256 id) external {
+        require (tweets[author][id].id == id, "TWEET NOT FOUND");
+        tweets[author][id].likes++;
+
+        emit TweetLike(msg.sender, author, id, tweets[author][id].likes);
+    }
+
+    function disLikeTweet(address author, uint256 id) external {
+        require (tweets[author][id].id == id, "TWEET NOT FOUND");
+        require (tweets[author][id].likes > 0, "NO LIKES");
+        tweets[author][id].likes--;
+
+        emit TweetUnlike(msg.sender, author, id, tweets[author][id].likes);
     }
 
     function getTweets(address _owner, uint _i) public view returns(Tweet memory) {
